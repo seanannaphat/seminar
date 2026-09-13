@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Roomara — Explore Beyond Limits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Manrope:wght@400..800&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@1,9..144,400..600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" id="brandHome">
+    <svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path d="M5 27 C5 12 15 4 27 4 C27 19 18 27 5 27 Z"/>
+      <path d="M5 27 C11 21 19 13 27 4" stroke-width="1.2"/>
+      <circle cx="27" cy="4" r="2.4" fill="currentColor" stroke="none"/>
+    </svg>
+    <span class="brand-copy"><b>Roomara</b><small>Explore Beyond Limits</small></span>
+  </a>
+  <div class="nlinks">
+    <a data-goto="features">Features</a>
+    <a data-goto="method">Methodology</a>
+    <a data-goto="routes">Routes</a>
+  </div>
+  <div class="nact">
+    <button class="btn ghost" id="signinBtn">Contact Us</button>
+    <button class="btn" id="startedBtn">Get Started</button>
+  </div>
+</nav>
+
+<main id="app"></main>
+
+<div class="tripbar" id="tripbar">
+  <div class="tb-in">
+    <div class="tb-sum" id="tbsum"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost sm" id="tbprev">Back</button>
+      <button class="btn sm" id="tbnext">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="mback" id="mback">
+  <div class="modal">
+    <button class="mclose" id="mclose"><i data-lucide="x"></i></button>
+    <div id="mbody"></div>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ================================================================
+   1 · CONFIG & DATA
+================================================================ */
+const CITIES = {
+  BKK:{city:'Bangkok',cc:'TH',lat:13.69,lon:100.75,grid:0.499,idx:0.90,districts:['Sukhumvit','Riverside','Old Town','Thonglor']},
+  NRT:{city:'Tokyo',cc:'JP',lat:35.77,lon:140.39,grid:0.470,idx:1.15,districts:['Shinjuku','Shibuya','Ginza']},
+  SIN:{city:'Singapore',cc:'SG',lat:1.36,lon:103.99,grid:0.417,idx:1.10,districts:['Chinatown','Tiong Bahru','Marina East']},
+  HKG:{city:'Hong Kong',cc:'HK',lat:22.31,lon:113.91,grid:0.570,idx:1.20,districts:['TST','Sheung Wan','Mong Kok']},
+  DPS:{city:'Bali',cc:'ID',lat:-8.75,lon:115.17,grid:0.660,idx:0.80,districts:['Ubud','Seminyak','Canggu']},
+  CDG:{city:'Paris',cc:'FR',lat:49.01,lon:2.55,grid:0.058,idx:1.10,districts:['Le Marais','Saint-Germain','Batignolles']},
+  LHR:{city:'London',cc:'UK',lat:51.47,lon:-0.45,grid:0.212,idx:1.25,districts:['Mayfair','South Bank','Shoreditch']},
+  BCN:{city:'Barcelona',cc:'ES',lat:41.30,lon:2.08,grid:0.162,idx:0.86,districts:['Eixample','Gothic Quarter','Gràcia']},
+  FCO:{city:'Rome',cc:'IT',lat:41.80,lon:12.25,grid:0.326,idx:0.96,districts:['Monti','Trastevere','Prati']},
+  CPH:{city:'Copenhagen',cc:'DK',lat:55.62,lon:12.65,grid:0.117,idx:1.22,districts:['Nørrebro','Indre By','Refshaleøen']},
+  JFK:{city:'New York',cc:'US',lat:40.64,lon:-73.78,grid:0.386,idx:1.38,districts:['SoHo','Williamsburg','Midtown East']},
+  SFO:{city:'San Francisco',cc:'US',lat:37.62,lon:-122.38,grid:0.386,idx:1.42,districts:['Mission','Nob Hill','Dogpatch']}
+};
+const AIRLINES = [
+  {code:'NB',name:'Nimbus Air',fare:1.00},
+  {code:'TA',name:'TransAtlas',fare:1.06},
+  {code:'CL',name:'Caelia',fare:0.84},
+  {code:'AV',name:'AirVolt',fare:0.79},
+  {code:'SK',name:'Skýlink',fare:1.03},
+  {code:'OM',name:'Orient Meridian',fare:0.96},
+  {code:'BP',name:'BluePacifica',fare:1.01}
+];
+const AIRCRAFT = {'A320neo':0.86,'B737-8':0.88,'A321neo':0.87,'A330-300':1.06,'B787-9':0.88,'A350-900':0.85,'B777-300ER':1.09,'A380-800':1.00};
+const CABINS = {
+  economy:{name:'Economy',fare:1.00,mult:1.00},
+  premium:{name:'Premium',fare:1.55,mult:1.60},
+  business:{name:'Business',fare:3.40,mult:2.92},
+  first:{name:'First',fare:5.20,mult:4.02}
+};
+const HOTEL_NAMES = ['Casa Lumen','The Verdia','Miremar Grand','Hotel Norly','Onze & Co.','Aurelia House','The Ironwood','Belvédère 9','Hotel Cardamom','Riverrun House','Maison Ondine','The Cartographer','Solaris Yard','Hotel Terra Viva'];
+const CERTS = ['Green Key','LEED Gold','BREEAM Excellent','EarthCheck','GSTC Verified'];
+const FACTORS = {gas:0.183, heat:0.150, gwp:2088, laundry:2.7};
+const RF = 1.9;
+const ROUTES = [['BKK','NRT'],['BKK','SIN'],['BKK','DPS'],['BKK','HKG'],['BKK','CDG']];
+
+const iso = d => d.toISOString().slice(0,10);
+const state = {
+  view:'home', tab:'flights',
+  origin:'BKK', dest:'NRT',
+  depart:iso(new Date(Date.now()+14*864e5)), ret:iso(new Date(Date.now()+18*864e5)),
+  pax:2, cabin:'economy', gc:0, rf:false,
+  wF:{price:40,time:20,carbon:40}, wH:{price:45,carbon:55}, minStars:0,
+  flights:[], hotels:[], hVis:[], fSearch:false, hSearch:false,
+  selF:null, selH:null, openF:null, openH:null
+};
+
+/* ================================================================
+   2 · UTILITIES
+================================================================ */
+const $ = s => document.querySelector(s);
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const pickR=(rng,arr)=>arr[Math.floor(rng()*arr.length)];
+function shuffle(a,rng){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function haversine(a,b){const R=6371,r=Math.PI/180,dLa=(b.lat-a.lat)*r,dLo=(b.lon-a.lon)*r;
+  const s=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(s))}
+const fmtE = n => '€'+Math.round(n).toLocaleString('en-GB');
+const fmtE2= n => '€'+n.toFixed(2);
+const fmtI = n => Math.round(n).toLocaleString('en-GB');
+const kg   = n => n>=1000 ? (n/1000).toFixed(2)+' tCO₂e' : Math.round(n)+' kgCO₂e';
+const kgS  = n => n>=1000 ? (n/1000).toFixed(1)+' t' : Math.round(n)+' kg';
+const hhmm = m => {m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const dur  = m => Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m';
+const median = a => {const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const nights = () => Math.max(0, Math.round((new Date(state.ret)-new Date(state.depart))/864e5));
+const roomsN = () => Math.ceil(state.pax/2);
+const co2Disp = f => f.co2*(state.rf?RF:1);
+const datefmt = s => new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const airlineName = f => f.stops ? f.legs[0].al.name+' + '+f.legs[1].al.name : f.legs[0].al.name;
+function legLabel(f,i){
+  if(!f.stops) return CITIES[state.origin].city+' → '+CITIES[state.dest].city;
+  return i===0 ? CITIES[state.origin].city+' → '+CITIES[f.via].city : CITIES[f.via].city+' → '+CITIES[state.dest].city;
+}
+function ticks(min,max,n){const span=max-min||max||1,s0=span/n,mag=Math.pow(10,Math.floor(Math.log10(s0))),nm=s0/mag;
+  const st=(nm<1.5?1:nm<3?2:nm<7?5:10)*mag,out=[];for(let v=Math.ceil(min/st)*st;v<=max+1e-9;v+=st)out.push(v);return out}
+function countUp(el,to,fmt,d=800){
+  if(!el)return;const t0=performance.now(),from=parseFloat(el.dataset.v)||0;el.dataset.v=to;
+  (function fr(t){const p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);el.textContent=fmt(from+(to-from)*e);if(p<1)requestAnimationFrame(fr)})(t0);
+}
+function toast(msg,ic='check'){
+  const w=$('#toasts'),d=document.createElement('div');d.className='toast';
+  d.innerHTML=`<i data-lucide="${ic}"></i><span>${msg}</span>`;w.appendChild(d);
+  window.lucide&&lucide.createIcons();
+  setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),320)},3600);
+}
+function flipUpdate(cont,html,key='data-fk'){
+  const old=[...cont.querySelectorAll('['+key+']')].map(el=>({k:el.getAttribute(key),r:el.getBoundingClientRect().top}));
+  cont.innerHTML=html;
+  [...cont.querySelectorAll('['+key+']')].forEach(el=>{
+    const o=old.find(a=>a.k===el.getAttribute(key));if(!o)return;
+    const dy=o.r-el.getBoundingClientRect().top;
+    if(Math.abs(dy)>2){el.style.transition='none';el.style.transform=`translateY(${dy}px)`;
+      requestAnimationFrame(()=>{el.style.transition='transform .45s cubic-bezier(.22,.9,.3,1)';el.style.transform=''});
+      setTimeout(()=>{el.style.transition='';el.style.transform=''},480);}
+  });
+}
+const icons = ()=>window.lucide&&lucide.createIcons();
+const CSSV = getComputedStyle(document.documentElement);
+const C_T2=CSSV.getPropertyValue('--text-2').trim(), C_ACC=CSSV.getPropertyValue('--acc').trim(),
+      C_PANEL=CSSV.getPropertyValue('--panel').trim();
+
+/* ================================================================
+   3 · MODELS
+================================================================ */
+const efBand = d => d<1500?0.158 : d<4000?0.120 : 0.115;
+const fareKm = d => d<1500?0.115 : d<4000?0.072 : 0.052;
+const legCO2 = (d,ac,mult) => d*efBand(d)*mult*AIRCRAFT[ac];
+function pickAircraft(d,rng){
+  if(d<1900) return pickR(rng,['A320neo','B737-8','A321neo']);
+  if(d<4200) return pickR(rng,['A321neo','A330-300','B787-9']);
+  return pickR(rng,['B787-9','A350-900','B777-300ER','A380-800']);
+}
+function genFlights(){
+  const GC=state.gc, rng=mulberry32(hash(state.origin+state.dest+state.depart+state.cabin+'v5'));
+  const cab=CABINS[state.cabin], long=GC>3500;
+  const pool=AIRLINES.filter(a=>!long||a.code!=='AV');
+  const L=[]; let n=0;
+  for(let i=0;i<5;i++){
+    const al=pool[Math.floor(rng()*pool.length)], ac=pickAircraft(GC,rng);
+    const dist=Math.round(GC+95);
+    const t=Math.round(40+dist/830*60*(0.96+rng()*0.08));
+    const price=Math.round((38+dist*fareKm(dist))*al.fare*(0.9+rng()*0.22)*cab.fare);
+    const co2=Math.round(legCO2(dist,ac,cab.mult));
+    const dep=Math.round((6+rng()*13)*12)*5;
+    L.push({id:'F'+(++n),no:al.code+' '+(104+Math.floor(rng()*880)),stops:0,via:null,lay:0,
+      legs:[{al,ac,dist}],price,dur:t,co2,dep,arr:dep+t});
+  }
+  const hubs=Object.keys(CITIES).filter(k=>k!==state.origin&&k!==state.dest)
+    .map(k=>({k,r:(haversine(CITIES[state.origin],CITIES[k])+haversine(CITIES[k],CITIES[state.dest]))/Math.max(1,GC)}))
+    .filter(h=>h.r<1.9).sort((a,b)=>a.r-b.r).slice(0,4);
+  hubs.forEach(h=>{
+    const cnt=1+(rng()<0.55?1:0);
+    for(let c=0;c<cnt;c++){
+      const a1=pool[Math.floor(rng()*pool.length)], a2=pool[Math.floor(rng()*pool.length)];
+      const d1=Math.round(haversine(CITIES[state.origin],CITIES[h.k])+95);
+      const d2=Math.round(haversine(CITIES[h.k],CITIES[state.dest])+95);
+      const ac1=pickAircraft(d1,rng), ac2=pickAircraft(d2,rng);
+      const lay=Math.round(75+rng()*135);
+      const t=Math.round(40+d1/830*60+40+d2/830*60+lay);
+      const price=Math.round(((38+d1*fareKm(d1))*a1.fare+(38+d2*fareKm(d2))*a2.fare)*0.86*(0.92+rng()*0.14)*cab.fare);
+      const co2=Math.round(legCO2(d1,ac1,cab.mult)+legCO2(d2,ac2,cab.mult));
+      const dep=Math.round((6+rng()*12)*12)*5;
+      L.push({id:'F'+(++n),no:a1.code+' '+(104+Math.floor(rng()*880)),stops:1,via:h.k,lay,
+        legs:[{al:a1,ac:ac1,dist:d1},{al:a2,ac:ac2,dist:d2}],price,dur:t,co2,dep,arr:dep+t});
+    }
+  });
+  return L;
+}
+function normW(w){const s=w.price+w.time+w.carbon;return{price:w.price/s,time:w.time/s,carbon:w.carbon/s}}
+function rankFlights(){
+  const L=state.flights, w=normW(state.wF);
+  const p=[Math.min(...L.map(f=>f.price)),Math.max(...L.map(f=>f.price))];
+  const t=[Math.min(...L.map(f=>f.dur)),Math.max(...L.map(f=>f.dur))];
+  const c=[Math.min(...L.map(f=>f.co2)),Math.max(...L.map(f=>f.co2))];
+  L.forEach(f=>f.score = w.price*(f.price-p[0])/(p[1]-p[0]||1) + w.time*(f.dur-t[0])/(t[1]-t[0]||1) + w.carbon*(f.co2-c[0])/(c[1]-c[0]||1));
+  L.sort((a,b)=>a.score-b.score);
+  L.forEach((f,i)=>f.rank=i+1);
+}
+function computeDerivedFlights(){
+  const L=state.flights;
+  L.forEach(f=>f.par=!L.some(g=>g!==f&&g.price<=f.price&&g.dur<=f.dur&&g.co2<=f.co2&&(g.price<f.price||g.dur<f.dur||g.co2<f.co2)));
+  const co2s=L.map(f=>f.co2).sort((a,b)=>a-b);
+  state.fMed={price:median(L.map(f=>f.price)),co2:median(co2s),dur:median(L.map(f=>f.dur))};
+  state.fMax={co2:co2s[co2s.length-1]};
+  state.fQ=[co2s[Math.floor(co2s.length*0.25)],co2s[Math.floor(co2s.length*0.75)]];
+  rankFlights();
+}
+const co2Band = f => f.co2<=state.fQ[0]?'low':f.co2>=state.fQ[1]?'high':'mid';
+
+function hcmi(h,grid){
+  const s2e=h.elec*grid, s1g=h.gas*FACTORS.gas, s1h=h.heat*FACTORS.heat, s1r=h.refKg*FACTORS.gwp;
+  const orn=Math.round(h.rooms*365*h.occupancy);
+  const laund=h.laundry?orn*FACTORS.laundry:0;
+  const total=s2e+s1g+s1h+s1r+laund;
+  return {orn,s2e,s1g,s1h,s1r,laund,total,per:total/orn,perM2:total/h.floor};
+}
+function genHotels(){
+  const city=CITIES[state.dest], rng=mulberry32(hash(state.dest+'hotels7'));
+  const names=shuffle(HOTEL_NAMES,rng).slice(0,8);
+  const stars=shuffle([3,4,4,4,5,3,5,4],rng);
+  return names.map((nm,i)=>{
+    const st=stars[i], rooms=Math.round(55+rng()*250);
+    const h={
+      id:'H'+(i+1), name:nm, stars:st, rooms,
+      district:city.districts[Math.floor(rng()*city.districts.length)],
+      occupancy:0.62+rng()*0.30,
+      elec:Math.round(rooms*(13500+rng()*8500)*(st===5?1.18:st===4?1.05:1)),
+      gas:rng()<0.3?0:Math.round(rooms*(5500+rng()*8500)),
+      heat:(state.dest==='BER'||state.dest==='CPH'||state.dest==='CPH')&&rng()<0.7?Math.round(rooms*(4000+rng()*5500)):0,
+      refKg:+(rooms*(0.12+rng()*0.22)).toFixed(1),
+      laundry:rng()<0.45,
+      price:Math.round((st===5?280:st===4?150:85)*city.idx*(0.88+rng()*0.4)),
+      certs:rng()<0.5?[pickR(rng,CERTS)]:[],
+      floor:Math.round(rooms*(34+rng()*10))
+    };
+    h.h=hcmi(h,city.grid);
+    return h;
+  });
+}
+function rankHotels(){
+  const L=state.hotels.filter(h=>h.stars>=state.minStars);
+  state.hVis=L;
+  L.forEach(h=>h.p2=!L.some(g=>g!==h&&g.price<=h.price&&g.h.per<=h.h.per&&(g.price<h.price||g.h.per<h.h.per)));
+  const w={p:state.wH.price/(state.wH.price+state.wH.carbon),c:state.wH.carbon/(state.wH.price+state.wH.carbon)};
+  const pr=[Math.min(...L.map(h=>h.price)),Math.max(...L.map(h=>h.price))];
+  const pc=[Math.min(...L.map(h=>h.h.per)),Math.max(...L.map(h=>h.h.per))];
+  L.forEach(h=>h.score=w.p*(h.price-pr[0])/(pr[1]-pr[0]||1)+w.c*(h.h.per-pc[0])/(pc[1]-pc[0]||1));
+  L.sort((a,b)=>a.score-b.score);
+  L.forEach((h,i)=>h.rank=i+1);
+}
+function computeDerivedHotels(){
+  const per=state.hotels.map(h=>h.h.per).sort((a,b)=>a-b);
+  state.hMedPer=median(per);
+  state.hQ=[per[Math.floor(per.length*0.25)],per[Math.floor(per.length*0.75)]];
+  rankHotels();
+}
+const hBand = h => h.h.per<=state.hQ[0]?'low':h.h.per>=state.hQ[1]?'high':'mid';
+
+function tripTotals(){
+  const t={price:0,co2:0,fP:0,fC:0,hP:0,hC:0};
+  if(state.selF){t.fP=state.selF.price*state.pax*2; t.fC=co2Disp(state.selF)*state.pax*2;}
+  if(state.selH){const n=nights(),r=roomsN(); t.hP=state.selH.price*r*n; t.hC=state.selH.h.per*r*n;}
+  t.price=t.fP+t.hP; t.co2=t.fC+t.hC; return t;
+}
+
+/* ================================================================
+   4 · SEARCH
+================================================================ */
+function doSearch(){
+  const errs=[];
+  if(!state.depart||!state.ret) errs.push('Pick your dates.');
+  else if(nights()<1) errs.push('Return / check-out must fall after departure / check-in.');
+  if(state.tab==='flights'&&state.origin===state.dest) errs.push('Origin and destination must differ.');
+  if(errs.length){const e=$('#perr');if(e)e.textContent=errs[0];return}
+  const e=$('#perr');if(e)e.textContent='';
+  if(state.tab==='flights'){
+    state.gc=haversine(CITIES[state.origin],CITIES[state.dest]);
+    state.flights=genFlights(); computeDerivedFlights();
+    state.hotels=genHotels(); computeDerivedHotels();
+    state.fSearch=true; state.hSearch=true;
+    state.selF=null; state.selH=null; state.openF=null; state.openH=null;
+    state.view='flights'; render();
+    toast(`${state.flights.length} itineraries · ${state.hotels.length} HCMI-audited stays · ${CITIES[state.dest].city}`,'leaf');
+  }else{
+    state.hotels=genHotels(); computeDerivedHotels();
+    state.hSearch=true;
+    state.selH=null; state.openH=null;
+    state.view='hotels'; render();
+    toast(`${state.hotels.length} properties audited in ${CITIES[state.dest].city} · median ${state.hMedPer.toFixed(1)} kgCO₂e/room-night`,'bed-double');
+  }
+  window.scrollTo({top:0});
+}
+function updateFacts(){
+  const el=$('#pfacts'); if(!el)return;
+  const d=CITIES[state.dest];
+  if(state.tab==='flights'){
+    const gc=Math.round(haversine(CITIES[state.origin],CITIES[state.dest]));
+    const est=(gc+95)*efBand(gc)*0.87*CABINS[state.cabin].mult;
+    el.textContent=`${fmtI(gc)} km great-circle · ${nights()} nights in ${d.city} · grid ${d.cc} ${d.grid.toFixed(3)} kgCO₂e/kWh · ≈ ${kgS(est)} CO₂e / traveller (est.)`;
+  }else{
+    el.textContent=`${d.city} · ${nights()} nights · ${roomsN()} room${roomsN()>1?'s':''} · grid ${d.cc} ${d.grid.toFixed(3)} kgCO₂e/kWh · HCMI audit runs on search`;
+  }
+}
+
+/* ================================================================
+   5 · VIEW · HOME
+================================================================ */
+function vHome(){
+  const opts=k=>Object.keys(CITIES).map(c=>`<option value="${c}" ${c===k?'selected':''}>${CITIES[c].city} (${c})</option>`).join('');
+  const min=iso(new Date());
+  const routeRows=ROUTES.map(([o,d])=>{
+    const gc=Math.round(haversine(CITIES[o],CITIES[d]));
+    const est=(gc+95)*efBand(gc+95)*0.87*2;
+    const fare=(38+gc*fareKm(gc))*0.95;
+    return `<div class="rrow" data-o="${o}" data-d="${d}">
+      <b>${CITIES[o].city} → ${CITIES[d].city}</b>
+      <span class="rv"><em>${fmtI(gc)}</em> km</span>
+      <span class="rv">≈ <em>${kgS(est)}</em> return</span>
+      <span class="rv rc">${fmtE(fare)}</span>
+      <span class="go">Search this <i data-lucide="arrow-right"></i></span>
+    </div>`;
+  }).join('');
+  return `
+  <div class="vwrap">
+  <section class="hero">
+    <svg class="arcs" viewBox="0 0 1440 760" preserveAspectRatio="none">
+      <path d="M-40,610 C360,300 940,240 1480,490"/>
+      <path class="alt" d="M-40,420 C480,160 1040,130 1480,320"/>
+      <circle cx="330" cy="425" r="4"/><circle cx="880" cy="278" r="4"/><circle cx="1150" cy="418" r="4"/><circle cx="560" cy="205" r="3"/>
+      <circle class="mdot" r="4"><animateMotion dur="16s" repeatCount="indefinite" path="M-40,610 C360,300 940,240 1480,490"/></circle>
+    </svg>
+    <div class="hero-in">
+      <div class="kick rise"><i class="dot"></i>AI-OPTIMIZED · HCMI CERTIFIED CARBON ACCOUNTING</div>
+      <h1 class="hero-h rise" style="animation-delay:.07s">Travel Further.<br><span class="lt">Tread Lighter.</span></h1>
+      <p class="lede rise" style="animation-delay:.13s">Flight and hotel booking with real-time carbon footprints — every option priced, timed and metered in kgCO₂e before you commit. Multi-objective AI ranking, certified HCMI methodology, choices that stay transparent to the last kilogram.</p>
+
+      <section class="spanel panel rise" id="spanel" style="animation-delay:.18s">
+        <div class="ptabs">
+          <button class="ptab ${state.tab==='flights'?'on':''}" data-tab="flights"><i data-lucide="plane"></i>Flights</button>
+          <button class="ptab ${state.tab==='hotels'?'on':''}" data-tab="hotels"><i data-lucide="bed-double"></i>Hotels</button>
+          <span class="k">HCMI v1.1 · BEIS 2023</span>
+        </div>
+        <div class="pfields" id="pf-flights">
+          <div class="fld"><label class="k" for="f-origin">From</label><div class="selw"><select id="f-origin">${opts(state.origin)}</select></div></div>
+          <div class="fld"><label class="k" for="f-dest">To</label><div class="selw"><select id="f-dest">${opts(state.dest)}</select></div></div>
+          <div class="fld"><label class="k" for="f-dep">Departure</label><input type="date" id="f-dep" min="${min}" value="${state.depart}"></div>
+          <div class="fld"><label class="k" for="f-ret">Return</label><input type="date" id="f-ret" min="${min}" value="${state.ret}"></div>
+        </div>
+        <div class="pfields h3" id="pf-hotels" ${state.tab==='hotels'?'':'hidden'}>
+          <div class="fld" style="grid-column:span 2"><label class="k" for="h-dest">Destination</label><div class="selw"><select id="h-dest">${opts(state.dest)}</select></div></div>
+          <div class="fld"><label class="k" for="h-in">Check-in</label><input type="date" id="h-in" min="${min}" value="${state.depart}"></div>
+          <div class="fld" style="display:none"><input type="date" id="h-out" value="${state.ret}"></div>
+        </div>
+        <div class="pfoot">
+          <div class="pf-l">
+            <div class="mini"><span class="k">${state.tab==='flights'?'travellers':'guests'}</span>
+              <div class="stepper"><button type="button" id="paxDn" aria-label="fewer">−</button><b id="paxn">${state.pax}</b><button type="button" id="paxUp" aria-label="more">+</button></div>
+              <span class="sub" style="margin:0">${roomsN()} room${roomsN()>1?'s':''}</span></div>
+            <div class="mini" id="cabinMini"><span class="k">cabin</span>
+              <div class="selw"><select id="cabinSel">${Object.entries(CABINS).map(([k,v])=>`<option value="${k}" ${state.cabin===k?'selected':''}>${v.name}</option>`).join('')}</select></div></div>
+          </div>
+          <button class="btn" id="goSearch">Search <i data-lucide="arrow-right"></i></button>
+        </div>
+        <div class="perr" id="perr"></div>
+      </section>
+      <div class="pfacts k" id="pfacts"></div>
+
+      <div class="trust rise" style="animation-delay:.24s">
+        <span><i data-lucide="plane"></i><b>640+</b> airlines audited</span>
+        <span><i data-lucide="building-2"></i><b>1.2M</b> properties on HCMI</span>
+        <span><i data-lucide="badge-check"></i>BEIS <b>2023</b> factor set</span>
+        <span><i data-lucide="trending-down"></i><b id="liveco2">12,431</b> kg CO₂e avoided this week</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="features">
+    <div class="wrap">
+      <div class="sec-h rise"><div><div class="k">Features</div><h2>How it works</h2></div>
+        <p>Three moves between “I want to go” and a booking whose climate cost you can defend.</p></div>
+      <div class="feat rise"><span class="fnum">01</span>
+        <div><h3>Carbon in plain sight</h3><p>Every search result carries a standardized footprint next to the price — kgCO₂e per traveller for flights, per occupied room-night for hotels under HCMI v1.1. Quartile-banded, benchmarked against the route or city median.</p></div>
+        <div class="fvis"><div class="vb"><i style="width:38%"></i></div><div class="vl"><span>route median 354 kg</span><b>248 kg · −30%</b></div></div>
+      </div>
+      <div class="feat rise" style="animation-delay:.07s"><span class="fnum">02</span>
+        <div><h3>The optimizer negotiates for you</h3><p>Our multi-objective engine scores every option on price, time and carbon under weights you set live — and flags the Pareto frontier: the itineraries nothing else can beat on all three at once.</p></div>
+        <div class="fvis"><svg viewBox="0 0 220 90" width="100%">
+          <path d="M14 22 L72 40 L128 52 L200 66" stroke="${C_ACC}" stroke-dasharray="4 4" fill="none" opacity=".7"/>
+          <circle cx="14" cy="22" r="4.5" fill="${C_ACC}"/><circle cx="72" cy="40" r="4.5" fill="${C_ACC}"/><circle cx="128" cy="52" r="4.5" fill="${C_ACC}"/>
+          <circle cx="60" cy="18" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/><circle cx="110" cy="26" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/>
+          <circle cx="150" cy="24" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/><circle cx="185" cy="42" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/>
+          <circle cx="92" cy="60" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/><circle cx="170" cy="60" r="3.5" fill="${C_PANEL}" stroke="${C_T2}"/>
+        </svg></div>
+      </div>
+      <div class="feat rise" style="animation-delay:.14s"><span class="fnum">03</span>
+        <div><h3>Book with a full account</h3><p>Your confirmation ships with a complete carbon ledger — scopes, factors, occupancy arithmetic — and benchmarks what you booked against what you could have booked. No offsets quietly bundled, no leaf stickers.</p></div>
+        <div class="fvis"><div class="fm">flights&nbsp;&nbsp;<b>941.2 kg</b> × 2 pax<br>stay&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>61.6 kg</b> · 2 room-nights<br>──────────────────────<br>trip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>1.94 tCO₂e</b> · −31% vs median</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="method">
+    <div class="wrap mgrid">
+      <div class="ml rise"><div class="k">Methodology</div><h2>Standards,<br>not vibes.</h2>
+        <p>Two published methodologies, applied at the point of purchase and shown in full before you pay. We display the arithmetic — grid factors, scope splits, occupancy math — because a number you can’t trace is a marketing claim, not an account.</p></div>
+      <div class="rise" style="animation-delay:.08s">
+        <div class="mblock"><div class="mh"><i data-lucide="bed-double"></i><h3>HCMI v1.1 — Hotel Carbon Measurement Initiative</h3></div>
+          <p>Per occupied room-night, from metered utilities to a single comparable figure.</p>
+          <div class="mformula">kgCO₂e/room-night = (scope 1 + scope 2 + laundry) ÷ (rooms × 365 × occupancy)</div>
+          <div class="fchips"><span class="fchip g">grid · regional</span><span class="fchip">gas 0.183 kg/kWh</span><span class="fchip">R-410A GWP 2,088</span><span class="fchip">laundry 2.7 kg/night</span></div></div>
+        <div class="mblock"><div class="mh"><i data-lucide="plane"></i><h3>BEIS 2023 — flight distance-class model</h3></div>
+          <p>Per passenger, adjusted for cabin and aircraft generation.</p>
+          <div class="mformula">CO₂e/pax = distance × class factor × cabin × aircraft efficiency</div>
+          <div class="fchips"><span class="fchip g">0.158 / 0.120 / 0.115</span><span class="fchip">cabin ×1.00–4.02</span><span class="fchip">+95 km detour</span><span class="fchip">RF ×1.9 optional</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="routes">
+    <div class="wrap">
+      <div class="sec-h rise"><div><div class="k">Routes</div><h2>Low-carbon routes this month</h2></div>
+        <p>Tap a route to load it into the search panel — the CO₂e estimate is per traveller, return, economy.</p></div>
+      ${routeRows}
+    </div>
+  </section>
+
+  <footer><div class="wrap fl">
+    <span class="fb"><svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 27 C5 12 15 4 27 4 C27 19 18 27 5 27 Z"/><path d="M5 27 C11 21 19 13 27 4" stroke-width="1.2"/></svg>EcoVoyage</span>
+    <span>Prototype — figures are deterministic estimates; the standards are real.</span>
+  </div></footer>
+  </div>`;
+}
+function vHomeReference(){
+  const opts=k=>Object.keys(CITIES).map(c=>`<option value="${c}" ${c===k?'selected':''}>${CITIES[c].city} (${c})</option>`).join('');
+  const min=iso(new Date());
+  const cards=[
+    ['Greece','Santorini, Greece','White-washed beauty over the Aegean sea.','4.8 (1,230)','https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=85','CDG','BKK'],
+    ['Bali','Bali, Indonesia','Tropical paradise with rich culture and nature.','4.7 (980)','https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=700&q=85','DPS','BKK'],
+    ['Switzerland','Swiss Alps','Scenic landscapes and breathtaking adventures.','4.9 (1,110)','https://images.unsplash.com/photo-1531973576160-7125cd663d86?auto=format&fit=crop&w=700&q=85','NRT','BKK'],
+    ['Maldives','Maldives','Luxury and tranquility in crystal-clear waters.','4.8 (1,340)','https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=700&q=85','SIN','BKK']
+  ];
+  return `<div class="reference-home">
+    <section class="ref-hero"><div class="ref-hero-image"></div><div class="ref-hero-shade"></div><div class="ref-hero-inner"><div class="ref-kicker">It's time to <span>✈</span></div><h1>Explore<br><em>the World</em></h1><p>Discover breathtaking destinations, unforgettable<br>experiences, and memories that last a lifetime.</p><button class="ref-dark-btn" id="startedBtnRef">Explore Now <i data-lucide="arrow-right"></i></button></div><div class="ref-scroll">Scroll Down <span>↓</span></div></section>
+    <section class="ref-search panel" id="spanel"><div class="ref-field"><i data-lucide="map-pin"></i><label>Where to?<select id="f-dest">${opts(state.dest)}</select></label></div><div class="ref-field"><i data-lucide="calendar-days"></i><label>Check in<input type="date" id="f-dep" min="${min}" value="${state.depart}"></label></div><div class="ref-field"><i data-lucide="calendar-days"></i><label>Check out<input type="date" id="f-ret" min="${min}" value="${state.ret}"></label></div><div class="ref-field"><i data-lucide="user-round"></i><label>Travelers<div class="ref-stepper"><button id="paxDn" aria-label="fewer">−</button><b id="paxn">${state.pax}</b><button id="paxUp" aria-label="more">+</button></div></label></div><button class="ref-search-btn" id="goSearch">Search <i data-lucide="search"></i></button><div hidden><select id="f-origin">${opts(state.origin)}</select><select id="cabinSel"><option value="economy" selected>Economy</option></select><input id="h-dest" value="${state.dest}"><input id="h-in" value="${state.depart}"><input id="h-out" value="${state.ret}"></div><div class="ptabs" hidden><button class="ptab on" data-tab="flights">Flights</button><button class="ptab" data-tab="hotels">Hotels</button></div></section>
+    <section class="ref-benefits wrap"><div><i data-lucide="hotel"></i><strong>Handpicked Hotels</strong><span>Stay at the finest<br>places to relax.</span></div><div><i data-lucide="users-round"></i><strong>Expert Guides</strong><span>Local experts to<br>guide your journey.</span></div><div><i data-lucide="award"></i><strong>Best Price Guarantee</strong><span>We match the best<br>prices for you.</span></div><div><i data-lucide="headphones"></i><strong>24/7 Support</strong><span>We're here for you<br>anytime, anywhere.</span></div></section>
+    <section class="ref-destinations wrap" id="features"><div class="ref-section-head"><div><small>EXPLORE THE BEST</small><h2>Popular Destinations</h2></div><a href="#routes">View all destinations <span>→</span></a></div><div class="ref-card-grid">${cards.map(([tag,title,desc,rating,img,d,o])=>`<article class="ref-destination rrow" data-o="${o}" data-d="${d}" style="background-image:url('${img}')"><span class="ref-tag"><i data-lucide="map-pin"></i>${tag}</span><div><h3>${title}</h3><p>${desc}</p><b>★ ${rating}</b></div></article>`).join('')}</div></section>
+    <section class="ref-offer wrap"><div><small>Limited Time Offer</small><h2>Get up to <em>30%</em> OFF</h2><p>on your next adventure</p><button class="ref-light-btn" id="offerBtn">Explore Deals <span>→</span></button></div></section>
+    <section class="ref-trusted"><div class="wrap"><strong>Trusted by thousands<br>of travelers worldwide</strong><span>Booking.com</span><span>▣ Expedia</span><span>◉ Tripadvisor</span><span>〽 Skyscanner</span><span>♡ airbnb</span></div></section>
+    <section class="ref-footer wrap" id="routes"><div class="ref-foot-brand"><b>⚑ Roomara</b><small>Explore Beyond Limits</small><p>We're here to help you discover the world<br>with unforgettable travel experiences and<br>exceptional service.</p></div><div><strong>Quick Links</strong><a>Destinations</a><a>Experiences</a><a>Hotels</a><a>Tours</a><a>Deals</a></div><div><strong>Support</strong><a>FAQs</a><a>Privacy Policy</a><a>Terms & Conditions</a><a>Contact Us</a></div><div><strong>Newsletter</strong><p>Subscribe to get exclusive travel<br>deals and updates.</p><div class="ref-email"><input placeholder="Enter your email"><button>➤</button></div></div></section><div class="ref-copyright">© 2025 Roomara. All rights reserved.</div>
+  </div>`;
+}
+function wireHome(){
+  updateFacts();
+  const tabBtns=document.querySelectorAll('.ptab');
+  tabBtns.forEach(b=>b.addEventListener('click',()=>{
+    state.tab=b.dataset.tab;
+    tabBtns.forEach(x=>x.classList.toggle('on',x===b));
+    $('#pf-flights').hidden=state.tab!=='flights';
+    $('#pf-hotels').hidden=state.tab!=='hotels';
+    $('#cabinMini').style.display=state.tab==='flights'?'':'none';
+    updateFacts();
+  }));
+  $('#f-origin').addEventListener('change',e=>{state.origin=e.target.value;updateFacts()});
+  $('#f-dest').addEventListener('change',e=>{state.dest=e.target.value;updateFacts()});
+  $('#h-dest').addEventListener('change',e=>{state.dest=e.target.value;updateFacts()});
+  const depChange=e=>{state.depart=e.target.value;updateFacts()};
+  const retChange=e=>{state.ret=e.target.value;updateFacts()};
+  ['f-dep','h-in'].forEach(id=>$('#'+id).addEventListener('change',depChange));
+  ['f-ret','h-out'].forEach(id=>$('#'+id).addEventListener('change',retChange));
+  $('#paxUp').addEventListener('click',()=>{state.pax=Math.min(6,state.pax+1);$('#paxn').textContent=state.pax;updateFacts()});
+  $('#paxDn').addEventListener('click',()=>{state.pax=Math.max(1,state.pax-1);$('#paxn').textContent=state.pax;updateFacts()});
+  $('#cabinSel').addEventListener('change',e=>{state.cabin=e.target.value;updateFacts()});
+  $('#goSearch').addEventListener('click',doSearch);
+  document.querySelectorAll('.rrow').forEach(r=>r.addEventListener('click',()=>{
+    state.origin=r.dataset.o; state.dest=r.dataset.d; state.tab='flights';
+    state.depart=iso(new Date(Date.now()+14*864e5));
+    state.ret=iso(new Date(Date.now()+18*864e5));
+    render();
+    const p=$('#spanel'); p.scrollIntoView({behavior:'smooth',block:'center'});
+    p.classList.remove('pulse'); void p.offsetWidth; p.classList.add('pulse');
+  }));
+}
+
+/* ================================================================
+   6 · VIEW · FLIGHTS
+================================================================ */
+function wRowF(k,label){return `<div class="wrow"><span class="wl k">${label}</span>
+  <input type="range" min="0" max="100" step="5" value="${state.wF[k]}" data-w="${k}"><output id="wo-${k}">${state.wF[k]}</output></div>`}
+function vFlights(){
+  const o=CITIES[state.origin], d=CITIES[state.dest], L=state.flights;
+  return `<div class="vwrap wrap">
+  <div class="res-head rise">
+    <div><button class="backlink" id="backHome"><i data-lucide="arrow-left"></i>New search</button>
+      <div class="k" style="margin-top:14px">Flights · step 01 / 03</div><h1>${o.city} → ${d.city}</h1></div>
+    <div class="res-meta">${fmtI(state.gc)} km great-circle · ${state.pax} traveller${state.pax>1?'s':''} · ${CABINS[state.cabin].name}<br>
+    ${datefmt(state.depart)} · ${L.length} itineraries · ${L.filter(f=>f.par).length} Pareto-optimal</div>
+  </div>
+  <div class="ctrl rise" style="animation-delay:.06s">
+    <div class="opt panel">
+      <span class="k">Optimizer weights</span>
+      ${wRowF('price','Price')}${wRowF('time','Time')}${wRowF('carbon','Carbon')}
+      <div class="tri"><i id="tri-p" style="background:#E7EFE8"></i><i id="tri-t" style="background:var(--amber)"></i><i id="tri-c" style="background:var(--acc)"></i></div>
+      <div class="triread" id="triread"></div>
+      <button class="btn ghost sm" id="wreset" style="margin-top:16px">Equalise weights</button>
+      <div class="rfrow"><span class="k">Basis</span>
+        <div class="seg" id="rfseg"><button data-v="0" class="${state.rf?'':'on'}">CO₂ only</button><button data-v="1" class="${state.rf?'on':''}">incl. non-CO₂ ×${RF}</button></div></div>
+    </div>
+    <div class="scard panel">
+      <div class="scwrap"><canvas id="scf" class="sc"></canvas><div class="tip" id="tipf"></div></div>
+      <div class="sc-cap">fare vs CO₂e per traveller · bubble size ∝ speed · solid = efficient frontier in this plane · ring = selected</div>
+    </div>
+  </div>
+  <div class="insight rise" style="animation-delay:.1s">
+    <div class="k"><i data-lucide="sliders-horizontal"></i>EcoVoyage optimizer · multi-objective ranking</div>
+    <p id="finsight"></p>
+  </div>
+  <div class="rows-head f rise" style="animation-delay:.13s"><span>#</span><span>itinerary</span><span>schedule</span><span>CO₂e / traveller</span><span style="text-align:right">fare</span><span></span></div>
+  <div class="rise" id="frows" style="animation-delay:.15s"></div>
+  <div class="fnote" style="margin-top:24px">CO₂e = distance × BEIS-2023 class factor × cabin factor × aircraft efficiency · detour +95 km · factors embed 82% fleet load · return leg mirrors outbound · full methodology in the trip summary.</div>
+  </div>`;
+}
+function flightRow(f){
+  const co2=co2Disp(f), band=co2Band(f), vs=Math.round((1-co2/(state.fMed.co2*(state.rf?RF:1)))*100);
+  const sel=state.selF&&state.selF.id===f.id, arrT=hhmm(f.arr)+(f.arr>=1440?' +1d':'');
+  return `<article class="row ${sel?'sel':''} ${state.openF===f.id?'open':''}" data-fk="${f.id}">
+    <div class="rgrid f rmain" data-sel="${f.id}">
+      <span class="rk n">${String(f.rank).padStart(2,'0')}</span>
+      <div class="cit"><b>${airlineName(f)}</b>
+        <span class="sub">${f.stops?`via ${CITIES[f.via].city} · ${dur(f.lay)} layover · 1 stop`:`${f.no} · ${f.legs[0].ac} · nonstop`}</span>
+        ${f.par?'<span class="b-pareto"><i data-lucide="badge-check"></i>Pareto-optimal</span>':''}</div>
+      <div class="csc n" style="font-size:13px">${hhmm(f.dep)} → ${arrT}<span class="sub">${dur(f.dur)}</span></div>
+      <div class="cco"><b>${kg(co2)}</b>
+        <div class="embar"><i style="width:${(f.co2/state.fMax.co2*100).toFixed(1)}%;background:var(--${band})"></i></div>
+        <span class="sub n" style="color:var(--${vs>=0?'acc':'coral'})">${vs>=0?'−':'+'}${Math.abs(vs)}% vs median</span></div>
+      <div class="cpr"><b>${fmtE(f.price)}</b><span class="sub">per traveller</span></div>
+      <div class="cact"><button class="btn sm ${sel?'':'ghost'}" data-selbtn="${f.id}">${sel?'Held':'Select'}</button>
+        <button class="exp" data-exp="${f.id}" aria-label="emissions breakdown"><i data-lucide="chevron-down"></i></button></div>
+    </div>
+    <div class="sheet"><div><div class="sheet-in">${flightSheet(f)}</div></div></div>
+  </article>`;
+}
+function flightSheet(f){
+  const cab=CABINS[state.cabin];
+  const rows=f.legs.map((l,i)=>`<tr><td>${legLabel(f,i)}</td><td>${l.ac}</td><td class="n">${fmtI(l.dist)} km</td>
+    <td class="n">${efBand(l.dist).toFixed(3)}</td><td class="n">×${cab.mult.toFixed(2)}</td><td class="n">×${AIRCRAFT[l.ac].toFixed(2)}</td>
+    <td class="n">${kgS(legCO2(l.dist,l.ac,cab.mult))}</td></tr>`).join('');
+  return `<h5>Passenger emissions account · ${f.id}</h5>
+  <table class="t"><tr><th>segment</th><th>aircraft</th><th class="n">distance</th><th class="n">class factor</th><th class="n">cabin</th><th class="n">eff.</th><th class="n">CO₂e</th></tr>
+  ${rows}
+  <tr class="total"><td>Outbound total</td><td></td><td class="n">${fmtI(f.legs.reduce((a,l)=>a+l.dist,0))} km</td><td colspan="3"></td><td class="n">${kgS(f.co2)}</td></tr></table>
+  <div class="fnote">Basis: ${state.rf?`CO₂ + non-CO₂ radiative effects (RF index ×${RF}) → ${kg(co2Disp(f))} per traveller`:`CO₂ only → ${kg(f.co2)} per traveller`}. Distances include a +95 km detour uplift; class factors embed an 82% fleet-average passenger load. Return leg mirrors this itinerary → trip flight account ×2.</div>`;
+}
+function refreshFlightRows(flip){
+  const c=$('#frows'); if(!c)return;
+  const html=state.flights.map(flightRow).join('');
+  flip?flipUpdate(c,html):c.innerHTML=html;
+  icons();
+}
+function updateTriF(){
+  const w=normW(state.wF), s=w.price+w.time+w.carbon;
+  $('#tri-p').style.width=(w.price/s*100)+'%';
+  $('#tri-t').style.width=(w.time/s*100)+'%';
+  $('#tri-c').style.width=(w.carbon/s*100)+'%';
+  $('#triread').textContent=`climate ${Math.round(w.carbon/s*100)}% · price ${Math.round(w.price/s*100)}% · time ${Math.round(w.time/s*100)}%`;
+  ['price','time','carbon'].forEach(k=>{const o=$('#wo-'+k); if(o)o.textContent=state.wF[k]});
+}
+function updateFInsight(){
+  const el=$('#finsight'); if(!el)return;
+  const L=state.flights, top=L[0], w=normW(state.wF);
+  const cheap=L.reduce((a,b)=>b.price<a.price?b:a), green=L.reduce((a,b)=>b.co2<a.co2?b:a);
+  const s=[`Weights live — climate ${Math.round(w.carbon*100)}%, price ${Math.round(w.price*100)}%, time ${Math.round(w.time*100)}%.`];
+  s.push(top.par?`Rank #1 (${airlineName(top)}) is Pareto-optimal — no itinerary beats it on price, time and carbon at once.`:`Rank #1 scores best under your current weight mix.`);
+  if(top!==cheap){
+    const dp=top.price-cheap.price, dc=cheap.co2-top.co2;
+    if(dc>1)s.push(`Versus the lowest fare (${fmtE(cheap.price)}), it adds ${fmtE(dp)} to avoid ${kg(dc)} — an abatement cost of ${fmtE2(dp/dc)} per kg.`);
+  } else s.push(`It is also the cheapest itinerary on this route.`);
+  if(top!==green)s.push(`The cleanest option would cut a further ${kg(top.co2-green.co2)} for ${fmtE(Math.max(0,green.price-top.price))} more${green.dur>top.dur?` and ${dur(green.dur-top.dur)} longer`:''}.`);
+  el.textContent=s.join(' ');
+}
+function selectFlight(id){
+  const f=state.flights.find(x=>x.id===id); if(!f)return;
+  if(state.selF&&state.selF.id===id){toast('This outbound is already held.','info');return}
+  state.selF=f;
+  refreshFlightRows(false); drawScatterF(); updateFInsight(); updateBar();
+  toast(`Outbound held · ${airlineName(f)} · ${kg(co2Disp(f))}/traveller`,'plane');
+}
+let scWrapF=null;
+function drawScatterF(){
+  const cv=$('#scf'); if(!cv)return;
+  const rf=state.rf?RF:1;
+  scWrapF=state.flights.map(f=>({x:f.price,y:f.co2*rf,f}));
+  const durs=state.flights.map(f=>f.dur), dmin=Math.min(...durs), dmax=Math.max(...durs);
+  scWrapF.forEach(w=>w.r=3.5+4.5*(dmax-w.f.dur)/((dmax-dmin)||1));
+  drawScatter(cv,scWrapF,{
+    xt:'fare per traveller →', yt:'↑ CO₂e / traveller',
+    fx:v=>'€'+Math.round(v), fy:v=>kgS(v),
+    selId:state.selF&&state.selF.id,
+    tip:w=>`<b>#${w.f.rank} · ${airlineName(w.f)}</b><br>${fmtE(w.f.price)} · ${dur(w.f.dur)}<br>${kg(w.f.co2*rf)}${w.f.par?' · Pareto':''}<br><span style="opacity:.55">click to hold</span>`,
+    onClick:id=>selectFlight(id)
+  });
+}
+function wireFlights(){
+  updateTriF(); refreshFlightRows(false); updateFInsight(); drawScatterF();
+  $('#backHome').addEventListener('click',()=>{state.view='home';render()});
+  let raf=null;
+  document.querySelectorAll('#app input[data-w]').forEach(inp=>inp.addEventListener('input',e=>{
+    state.wF[e.target.dataset.w]=+e.target.value; updateTriF();
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=null;rankFlights();refreshFlightRows(true);drawScatterF();updateFInsight()});
+  }));
+  $('#wreset').addEventListener('click',()=>{
+    state.wF={price:33,time:34,carbon:33};
+    document.querySelectorAll('#app input[data-w]').forEach(i=>i.value=state.wF[i.dataset.w]);
+    updateTriF();rankFlights();refreshFlightRows(true);drawScatterF();updateFInsight();
+  });
+  $('#rfseg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    state.rf=b.dataset.v==='1';
+    $('#rfseg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    refreshFlightRows(false); drawScatterF(); updateBar();
+    toast(state.rf?'Basis now includes non-CO₂ radiative effects (×'+RF+').':'Back to CO₂-only basis.','wind');
+  }));
+  $('#frows').addEventListener('click',e=>{
+    const sb=e.target.closest('[data-selbtn]'); if(sb){selectFlight(sb.dataset.selbtn);return}
+    const ex=e.target.closest('[data-exp]');
+    if(ex){state.openF=state.openF===ex.dataset.exp?null:ex.dataset.exp;refreshFlightRows(false);return}
+    const rm=e.target.closest('.rmain'); if(rm)selectFlight(rm.dataset.sel);
+  });
+  bindScatterEvents($('#scf'),$('#tipf'),()=>scWrapF);
+}
+
+/* ================================================================
+   7 · VIEW · HOTELS (HCMI pipeline)
+================================================================ */
+function wRowH(k,label){return `<div class="wrow"><span class="wl k">${label}</span>
+  <input type="range" min="0" max="100" step="5" value="${state.wH[k]}" data-wh="${k}"><output id="ho-${k}">${state.wH[k]}</output></div>`}
+function focusHotel(){return state.hotels.find(h=>h.id===state.openH)||state.selH||state.hVis[0]||state.hotels[0]}
+function vHotels(){
+  const c=CITIES[state.dest], n=Math.max(1,nights());
+  return `<div class="vwrap wrap">
+  <div class="res-head rise">
+    <div><button class="backlink" id="backHome2"><i data-lucide="arrow-left"></i>New search</button>
+      <div class="k" style="margin-top:14px">Stays · step 02 / 03</div><h1>${c.city}, audited</h1></div>
+    <div class="res-meta">${n} night${n>1?'s':''} · ${roomsN()} room${roomsN()>1?'s':''} · ${state.pax} traveller${state.pax>1?'s':''}<br>
+    grid ${c.cc} ${c.grid.toFixed(3)} kgCO₂e/kWh · city median ${state.hMedPer.toFixed(1)} kg/room-night</div>
+  </div>
+  <div class="pipe rise" id="pipe" style="animation-delay:.05s"></div>
+  <div class="ctrl rise" style="animation-delay:.08s">
+    <div class="opt panel">
+      <span class="k">Optimizer weights</span>
+      ${wRowH('price','Price')}${wRowH('carbon','Carbon')}
+      <div class="tri"><i id="htri-p" style="background:#E7EFE8"></i><i id="htri-c" style="background:var(--acc)"></i></div>
+      <div class="triread" id="htriread"></div>
+      <div class="rfrow"><span class="k">Min rating</span>
+        <div class="seg" id="starseg"><button data-s="0" class="${state.minStars===0?'on':''}">Any</button><button data-s="4" class="${state.minStars===4?'on':''}">4+</button><button data-s="5" class="${state.minStars===5?'on':''}">5</button></div></div>
+    </div>
+    <div class="scard panel">
+      <div class="scwrap"><canvas id="sch" class="sc"></canvas><div class="tip" id="tiph"></div></div>
+      <div class="sc-cap">rate vs kgCO₂e per occupied room-night · bubble size ∝ rating · solid = efficient frontier · ring = selected</div>
+    </div>
+  </div>
+  <div class="insight rise" style="animation-delay:.1s">
+    <div class="k"><i data-lucide="sliders-horizontal"></i>EcoVoyage optimizer · price vs carbon</div>
+    <p id="hinsight"></p>
+  </div>
+  <div class="rows-head h rise" style="animation-delay:.13s"><span>#</span><span>property</span><span>HCMI · kgCO₂e / room-night</span><span>occupancy</span><span style="text-align:right">rate</span><span></span></div>
+  <div class="rise" id="hrows" style="animation-delay:.15s"></div>
+  <div class="fnote" style="margin-top:24px">HCMI v1.1 (simplified): (scope 1 + scope 2 + outsourced laundry) ÷ annual occupied room-nights. Electricity at the regional grid factor; natural gas ${FACTORS.gas} kgCO₂e/kWh; refrigerant leakage at GWP ${fmtI(FACTORS.gwp)}. Expand any property for its full computation sheet.</div>
+  </div>`;
+}
+function renderPipeline(){
+  const el=$('#pipe'); const h=focusHotel(); if(!el||!h)return;
+  const c=CITIES[state.dest], H=h.h, s1=H.s1g+H.s1h+H.s1r;
+  const stages=[
+    {ic:'plug-zap',t:'Metered intake',v:`${fmtI(h.elec)} kWh electricity · ${fmtI(h.gas)} kWh gas${h.heat?` · ${fmtI(h.heat)} kWh district heat`:''} · ${h.refKg} kg R-410A`},
+    {ic:'map',t:'Factor mapping',v:`${c.cc} grid ${c.grid.toFixed(3)} · gas ${FACTORS.gas} · heat ${FACTORS.heat} · GWP ${fmtI(FACTORS.gwp)}`},
+    {ic:'sigma',t:'Scope aggregation',v:`${kgS(H.total)} CO₂e — S1 ${kgS(s1)} · S2 ${kgS(H.s2e)} · laundry ${kgS(H.laund)}`},
+    {ic:'divide',t:'HCMI output',v:`÷ ${fmtI(H.orn)} room-nights → <span class="pv" id="pipev">0.0</span> <span style="font-size:11px">kg/night</span>`}
+  ];
+  el.innerHTML=`<div class="ph"><span class="k">Automated HCMI pipeline · ${h.name}</span><span class="k" style="color:var(--acc)">source: 12-month utility sync</span></div>
+  <div class="pflow">${stages.map((s,i)=>`
+    <div class="stage" style="--i:${i}"><span class="si"><i data-lucide="${s.ic}"></i></span><em>${s.t}</em><b>${s.v}</b></div>
+    ${i<3?'<span class="parrow"><i data-lucide="move-right"></i></span>':''}`).join('')}</div>`;
+  icons();
+  countUp($('#pipev'),H.per,v=>v.toFixed(1));
+}
+function starsSvg(n){
+  let s='';for(let i=1;i<=5;i++)s+=`<svg viewBox="0 0 24 24" class="st ${i<=n?'f':''}"><path d="M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.9 6.4 20l1.3-6.2L3 9.5l6.3-.7z"/></svg>`;
+  return `<span class="stars">${s}</span>`;
+}
+function hotelRow(h){
+  const H=h.h, band=hBand(h), vs=Math.round((1-H.per/state.hMedPer)*100);
+  const sel=state.selH&&state.selH.id===h.id;
+  return `<article class="row ${sel?'sel':''} ${state.openH===h.id?'open':''}" data-fk="${h.id}">
+    <div class="rgrid h rmain" data-selh="${h.id}">
+      <span class="rk n">${String(h.rank).padStart(2,'0')}</span>
+      <div class="cit"><b>${h.name}</b>${starsSvg(h.stars)}
+        <span class="sub">${h.district} · ${h.rooms} rooms${h.certs.length?` · ${h.certs[0]}`:''}</span>
+        ${h.p2?'<span class="b-pareto"><i data-lucide="badge-check"></i>Efficient</span>':''}</div>
+      <div class="cco"><b>${H.per.toFixed(1)}</b> <span class="unit">kgCO₂e / room-night</span>
+        <div class="embar"><i style="width:${(H.per/state.hQ[1]*100).toFixed(1)}%;background:var(--${band})"></i></div>
+        <span class="sub n" style="color:var(--${vs>=0?'acc':'coral'})">${vs>=0?'−':'+'}${Math.abs(vs)}% vs city median</span></div>
+      <div class="csc n" style="font-size:13px">${Math.round(h.occupancy*100)}%<span class="sub">annual occ.</span></div>
+      <div class="cpr"><b>${fmtE(h.price)}</b><span class="sub">per night</span></div>
+      <div class="cact"><button class="btn sm ${sel?'':'ghost'}" data-selhbtn="${h.id}">${sel?'Held':'Select'}</button>
+        <button class="exp" data-hexp="${h.id}" aria-label="HCMI sheet"><i data-lucide="chevron-down"></i></button></div>
+    </div>
+    <div class="sheet"><div><div class="sheet-in">${hotelSheet(h)}</div></div></div>
+  </article>`;
+}
+function hotelSheet(h){
+  const c=CITIES[state.dest], H=h.h, s1=H.s1g+H.s1h+H.s1r, tot=H.total||1, n=Math.max(1,nights());
+  const pct=v=>(v/tot*100).toFixed(1);
+  const rows=[
+    ['Grid electricity','Scope 2',fmtI(h.elec)+' kWh',c.grid.toFixed(3)+' kg/kWh',H.s2e],
+    h.gas?['Natural gas','Scope 1',fmtI(h.gas)+' kWh',FACTORS.gas+' kg/kWh',H.s1g]:null,
+    h.heat?['District heat','Scope 1',fmtI(h.heat)+' kWh',FACTORS.heat+' kg/kWh',H.s1h]:null,
+    ['Refrigerant R-410A','Scope 1',h.refKg+' kg',fmtI(FACTORS.gwp)+' kg/kg',H.s1r],
+    h.laundry?['Outsourced laundry','Scope 2 (est.)',fmtI(H.orn)+' room-nights',FACTORS.laundry+' kg/night',H.laund]:null
+  ].filter(Boolean).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td><td class="n">${kgS(r[4])}</td></tr>`).join('');
+  const vs=Math.round((1-H.per/state.hMedPer)*100);
+  return `<div class="sh-grid">
+    <div><h5>Property profile</h5><dl>
+      <div><dt>Guest rooms</dt><dd>${h.rooms}</dd></div>
+      <div><dt>Floor area</dt><dd>${fmtI(h.floor)} m²</dd></div>
+      <div><dt>Annual occupancy</dt><dd>${Math.round(h.occupancy*100)}%</dd></div>
+      <div><dt>Occupied room-nights</dt><dd>${fmtI(H.orn)} / yr</dd></div>
+      <div><dt>Certification</dt><dd>${h.certs[0]||'none disclosed'}</dd></div>
+      <div><dt>Your stay</dt><dd>${roomsN()} room × ${n} nights</dd></div>
+    </dl></div>
+    <div><h5>Annual emissions inventory · HCMI v1.1</h5>
+      <table class="t"><tr><th>input</th><th>scope</th><th class="n">amount</th><th class="n">factor</th><th class="n">kgCO₂e</th></tr>
+      ${rows}
+      <tr class="total"><td colspan="4">Total annual emissions</td><td class="n">${kgS(H.total)}</td></tr></table>
+      <div class="props"><i style="width:${pct(s1)}%;background:var(--text-2)"></i><i style="width:${pct(H.s2e)}%;background:var(--acc)"></i><i style="width:${pct(H.laund)}%;background:var(--amber)"></i></div>
+      <div class="props-legend">
+        <span style="--sw:var(--text-2)">scope 1 · ${pct(s1)}%</span>
+        <span style="--sw:var(--acc)">electricity · ${pct(H.s2e)}%</span>
+        <span style="--sw:var(--amber)">laundry · ${pct(H.laund)}%</span>
+      </div>
+    </div>
+  </div>
+  <div class="calc">${kgS(H.total)} CO₂e ÷ ${fmtI(H.orn)} room-nights = <b>${H.per.toFixed(1)} kg</b>
+    <span style="color:var(--text-2)">also ${H.perM2.toFixed(1)} kg/m²/yr</span>
+    <span style="color:var(--${vs>=0?'acc':'coral'})">${vs>=0?'−':'+'}${Math.abs(vs)}% vs city median</span></div>
+  <div class="fnote">Factors: ${c.cc} grid ${c.grid.toFixed(3)} kgCO₂e/kWh · gas ${FACTORS.gas} · district heat ${FACTORS.heat} · R-410A GWP ${fmtI(FACTORS.gwp)} (AR4) · outsourced laundry ${FACTORS.laundry} kg/occupied room-night. Your stay account: ${H.per.toFixed(1)} × ${roomsN()} room × ${n} nights = ${kg(H.per*roomsN()*n)}.</div>`;
+}
+function refreshHotelRows(flip){
+  const c=$('#hrows'); if(!c)return;
+  const html=state.hVis.length?state.hVis.map(hotelRow).join(''):'<div class="empty">No properties at this rating — loosen the filter.</div>';
+  flip?flipUpdate(c,html):c.innerHTML=html;
+  icons();
+}
+function updateTriH(){
+  const s=state.wH.price+state.wH.carbon;
+  $('#htri-p').style.width=(state.wH.price/s*100)+'%';
+  $('#htri-c').style.width=(state.wH.carbon/s*100)+'%';
+  $('#htriread').textContent=`carbon ${Math.round(state.wH.carbon/s*100)}% · price ${Math.round(state.wH.price/s*100)}%`;
+  ['price','carbon'].forEach(k=>{const o=$('#ho-'+k);if(o)o.textContent=state.wH[k]});
+}
+function updateHInsight(){
+  const el=$('#hinsight'); if(!el||!state.hVis.length)return;
+  const c=CITIES[state.dest], top=state.hVis[0];
+  const cheap=state.hotels.reduce((a,b)=>b.price<a.price?b:a), green=state.hotels.reduce((a,b)=>b.h.per<a.h.per?b:a);
+  const s=[`Weights live — carbon ${Math.round(state.wH.carbon/(state.wH.price+state.wH.carbon)*100)}%, price ${Math.round(state.wH.price/(state.wH.price+state.wH.carbon)*100)}%.`];
+  s.push(top.p2?`${top.name} is efficient on both axes — nothing visible dominates it.`:`${top.name} ranks first under your weight mix.`);
+  s.push(`${c.city} runs on a ${c.grid.toFixed(3)} kgCO₂e/kWh grid; the city median is ${state.hMedPer.toFixed(1)} kg per room-night — ${top.name} sits at ${top.h.per.toFixed(1)} (${top.h.per<state.hMedPer?'−':'+'}${Math.abs(Math.round((1-top.h.per/state.hMedPer)*100))}%).`);
+  if(top!==cheap)s.push(`The cheapest bed (${fmtE(cheap.price)}/night) emits ${cheap.h.per.toFixed(1)} kg — ${cheap.h.per>top.h.per?`+${((cheap.h.per/top.h.per-1)*100).toFixed(0)}% carbon per euro saved`:`and is also dirtier per night`}.`);
+  if(top!==green&&top.h.per>green.h.per)s.push(`The cleanest property runs ${green.h.per.toFixed(1)} kg/night for ${fmtE(green.price)} — a ${fmtE2(Math.max(0,(green.price-top.price))/Math.max(0.1,(top.h.per-green.h.per)))} per kg avoided.`);
+  el.textContent=s.join(' ');
+}
+let scWrapH=null;
+function drawScatterH(){
+  const cv=$('#sch'); if(!cv||!state.hVis.length)return;
+  scWrapH=state.hVis.map(h=>({x:h.price,y:h.h.per,h}));
+  scWrapH.forEach(w=>w.r=3.5+(w.h.stars-3)*1.6);
+  drawScatter(cv,scWrapH,{
+    xt:'rate per night →', yt:'↑ kgCO₂e / room-night',
+    fx:v=>'€'+Math.round(v), fy:v=>v.toFixed(0),
+    selId:state.selH&&state.selH.id,
+    tip:w=>`<b>#${w.h.rank} · ${w.h.name}</b><br>${fmtE(w.h.price)}/night · ${w.h.stars} star${w.h.stars>1?'s':''}<br>${w.h.h.per.toFixed(1)} kgCO₂e/room-night${w.h.p2?' · efficient':''}<br><span style="opacity:.55">click to hold</span>`,
+    onClick:id=>selectHotel(id)
+  });
+}
+function selectHotel(id){
+  const h=state.hotels.find(x=>x.id===id); if(!h)return;
+  if(state.selH&&state.selH.id===id){toast('This stay is already held.','info');return}
+  state.selH=h;
+  refreshHotelRows(false); drawScatterH(); updateHInsight(); updateBar(); renderPipeline();
+  toast(`Stay held · ${h.name} · ${h.h.per.toFixed(1)} kgCO₂e/room-night`,'bed-double');
+}
+function wireHotels(){
+  renderPipeline(); updateTriH(); refreshHotelRows(false); updateHInsight(); drawScatterH();
+  $('#backHome2').addEventListener('click',()=>{state.view='home';render()});
+  let raf=null;
+  document.querySelectorAll('#app input[data-wh]').forEach(inp=>inp.addEventListener('input',e=>{
+    state.wH[e.target.dataset.wh]=+e.target.value; updateTriH();
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=null;rankHotels();refreshHotelRows(true);drawScatterH();updateHInsight()});
+  }));
+  $('#starseg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    state.minStars=+b.dataset.s;
+    $('#starseg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    rankHotels(); refreshHotelRows(false); drawScatterH(); updateHInsight();
+  }));
+  $('#hrows').addEventListener('click',e=>{
+    const sb=e.target.closest('[data-selhbtn]'); if(sb){selectHotel(sb.dataset.selhbtn);return}
+    const ex=e.target.closest('[data-hexp]');
+    if(ex){state.openH=state.openH===ex.dataset.hexp?null:ex.dataset.hexp;refreshHotelRows(false);renderPipeline();return}
+    const rm=e.target.closest('.rmain'); if(rm)selectHotel(rm.dataset.selh);
+  });
+  bindScatterEvents($('#sch'),$('#tiph'),()=>scWrapH);
+}
+
+/* ================================================================
+   8 · VIEW · TRIP SUMMARY
+================================================================ */
+function benchGroup(title,unit,rows){
+  const max=Math.max(...rows.map(r=>r[1]))||1;
+  return `<div style="margin-bottom:26px"><div class="k" style="margin-bottom:8px">${title} — ${unit}</div>
+  ${rows.map(r=>`<div class="brow ${r[2]?'you':''}"><span class="bl">${r[0]}</span>
+    <div class="btrack"><i style="width:${(r[1]/max*100).toFixed(1)}%"></i></div>
+    <span class="bv">${kgS(r[1])}</span></div>`).join('')}</div>`;
+}
+function vSummary(){
+  const t=tripTotals(), f=state.selF, h=state.selH;
+  const c=CITIES[state.dest], n=Math.max(1,nights()), r=roomsN();
+  const rf=state.rf?RF:1;
+  const fB=[Math.min(...state.flights.map(x=>x.co2)),Math.max(...state.flights.map(x=>x.co2))].map(v=>v*rf);
+  const hB=[Math.min(...state.hotels.map(x=>x.h.per)),Math.max(...state.hotels.map(x=>x.h.per))];
+  const arrT=hhmm(f.arr)+(f.arr>=1440?' +1d':'');
+  const eq=[
+    ['tree-pine',fmtI(t.co2/21),'tree-years of sequestration (≈21 kg/yr each)'],
+    ['car-front',fmtI(t.co2/0.171),'km in an average petrol car (171 g/km)'],
+    ['smartphone',fmtI(t.co2/0.008),'full smartphone charges (≈8 g each)']
+  ];
+  const acRows=Object.entries(AIRCRAFT).map(([k,v])=>`<tr><td>${k}</td><td class="n">×${v.toFixed(2)}</td></tr>`).join('');
+  const grRows=Object.entries(CITIES).map(([k,v])=>`<tr><td>${v.city} (${k})</td><td class="n">${v.grid.toFixed(3)}</td></tr>`).join('');
+  return `<div class="vwrap wrap">
+  <div class="res-head rise">
+    <div><button class="backlink" id="backHome3"><i data-lucide="arrow-left"></i>New search</button>
+      <div class="k" style="margin-top:14px">Trip summary · step 03 / 03</div><h1>The trip, accounted</h1></div>
+    <div class="res-meta">${state.origin} → ${state.dest} · ${datefmt(state.depart)} – ${datefmt(state.ret)}<br>${state.pax} travellers · ${r} room${r>1?'s':''} · ${n} night${n>1?'s':''}${state.rf?' · incl. non-CO₂ ×'+RF:''}</div>
+  </div>
+  <div class="lg-tot rise" style="animation-delay:.05s">
+    <div><span class="k">Total fare · all travellers, return included</span><div class="big" id="totP">€0</div>
+      <div class="lg-sub"><span>flight <b>${fmtE(t.fP)}</b></span><span>stay <b>${fmtE(t.hP)}</b></span></div></div>
+    <div><span class="k">Total carbon account · standardized</span><div class="big g" id="totC">0</div>
+      <div class="lg-sub"><span><b>${kg(t.co2/state.pax)}</b> / traveller</span><span><b>${kg(t.co2/n)}</b> / travel day</span></div></div>
+  </div>
+  <div class="rise" style="animation-delay:.09s">
+    <div class="sect"><span class="k">01</span><h3>Where the carbon sits</h3></div>
+    <div class="comp"><i style="width:${t.co2?(t.fC/t.co2*100):0}%;background:var(--acc)"></i><i style="width:${t.co2?(t.hC/t.co2*100):0}%;background:var(--amber)"></i></div>
+    <div class="compleg"><span style="--sw:var(--acc)">flights — ${kg(t.fC)}${t.co2?` (${Math.round(t.fC/t.co2*100)}%)`:''}</span>
+      <span style="--sw:var(--amber)">stay — ${kg(t.hC)}${t.co2?` (${Math.round(t.hC/t.co2*100)}%)`:''}</span></div>
+    ${h?'':'<div class="fnote">No stay held yet — flight-only account. <a href="#" id="addstay" style="color:var(--acc)">Choose a stay</a> for the complete picture.</div>'}
+  </div>
+  <div class="rise" style="animation-delay:.12s">
+    <div class="sect"><span class="k">02</span><h3>Against what you could have booked</h3></div>
+    ${benchGroup('Flight · per traveller, outbound',[['Your pick',co2Disp(f),true],['Best available',fB[0]],['Route median',state.fMed.co2*rf],['Highest',fB[1]]])}
+    ${benchGroup('Stay · per occupied room-night',h?[['Your pick',h.h.per,true],['Cleanest property',hB[0]],['City median',state.hMedPer],['Highest',hB[1]]]:[['Cleanest property',hB[0]],['City median',state.hMedPer],['Highest',hB[1]]])}
+  </div>
+  <div class="rise" style="animation-delay:.15s">
+    <div class="sect"><span class="k">03</span><h3>What that weight means</h3></div>
+    <div class="equiv">${eq.map(e=>`<div class="eq"><i data-lucide="${e[0]}"></i><span><b>${e[1]}</b><span>${e[2]}</span></span></div>`).join('')}</div>
+  </div>
+  <div class="rise" style="animation-delay:.18s">
+    <div class="sect"><span class="k">04</span><h3>Itinerary on record</h3></div>
+    <table class="t" style="max-width:780px">
+      <tr><td>Outbound</td><td>${airlineName(f)} · ${f.no} · ${hhmm(f.dep)} → ${arrT} · ${dur(f.dur)}${f.stops?` · via ${CITIES[f.via].city}`:''}</td><td class="n">${fmtE(f.price*state.pax)}</td><td class="n">${kg(co2Disp(f)*state.pax)}</td></tr>
+      <tr><td>Return</td><td>mirrors outbound · same cabin & aircraft class</td><td class="n">${fmtE(f.price*state.pax)}</td><td class="n">${kg(co2Disp(f)*state.pax)}</td></tr>
+      <tr><td>Stay</td><td>${h?`${h.name} · ${h.district} · ${n} nights · ${r} room · ${h.h.per.toFixed(1)} kgCO₂e/room-night (HCMI v1.1)`:'not selected'}</td><td class="n">${h?fmtE(h.price*r*n):'—'}</td><td class="n">${h?kg(h.h.per*r*n):'—'}</td></tr>
+      <tr class="total"><td>Total</td><td></td><td class="n">${fmtE(t.price)}</td><td class="n">${kg(t.co2)}</td></tr>
+    </table>
+  </div>
+  <div class="rise" style="animation-delay:.21s">
+    <div class="sect"><span class="k">05</span><h3>Methodology, in full</h3></div>
+    <details class="acc"><summary>Flight emissions — BEIS 2023 distance-class model</summary><div class="ab">
+      <b>CO₂e per passenger = Σ legs [ distance × class factor × cabin factor × aircraft efficiency ]</b>.
+      Distance is great-circle plus a <code>+95 km</code> detour uplift. Class factors (kgCO₂/pax-km, economy): <code>&lt;1,500 km → 0.158</code> · <code>1,500–4,000 km → 0.120</code> · <code>&gt;4,000 km → 0.115</code>.
+      Cabin multipliers: Economy ×1.00 · Premium ×1.60 · Business ×2.92 · First ×4.02. Aircraft efficiency versus fleet average:
+      <table class="t"><tr><th>type</th><th class="n">efficiency</th></tr>${acRows}</table>
+      Factors embed an 82% fleet-average passenger load. The optional basis adds non-CO₂ radiative effects via an RF index of <code>×${RF}</code>. Return leg mirrors the outbound itinerary.
+    </div></details>
+    <details class="acc"><summary>Hotel carbon — HCMI v1.1, per occupied room-night</summary><div class="ab">
+      <b>kgCO₂e / occupied room-night = (scope 1 + scope 2 + outsourced laundry) ÷ (rooms × 365 × annual occupancy)</b>.
+      Scope 1: natural gas <code>${FACTORS.gas} kg/kWh</code>, district heat <code>${FACTORS.heat} kg/kWh</code>, refrigerant R-410A leakage at GWP <code>${fmtI(FACTORS.gwp)}</code> (AR4, GWP₁₀₀).
+      Scope 2: purchased electricity at the regional grid factor. Outsourced laundry is estimated at <code>${FACTORS.laundry} kg</code> per occupied room-night. Regional grid factors (kgCO₂e/kWh, illustrative annual averages):
+      <table class="t"><tr><th>region</th><th class="n">factor</th></tr>${grRows}</table>
+      HCMI also reports per-m² intensity — shown in each property sheet.
+    </div></details>
+    <details class="acc"><summary>Disclosures & data provenance</summary><div class="ab">
+      This is a design prototype: itineraries, properties and utility feeds are deterministically generated per route so figures are reproducible. A production deployment would ingest live utility metering and HCMI/CHSB property submissions, and sync factor sets annually. Figures are <b>estimates for comparison at the point of purchase, not guarantees</b>. EcoVoyage ranks reductions first — no offsets are bundled into fares, and no option is labelled “green” without a number behind it.
+    </div></details>
+  </div>
+  <div class="holdzone rise" style="animation-delay:.24s">
+    <button class="btn" id="holdbtn">Hold this itinerary <i data-lucide="scroll-text"></i></button>
+    <span class="k" style="letter-spacing:.1em">free hold · 24 h · no payment</span>
+  </div>
+  </div>`;
+}
+function wireSummary(){
+  const t=tripTotals();
+  countUp($('#totP'),t.price,v=>fmtE(v));
+  countUp($('#totC'),t.co2,v=>kg(v));
+  $('#backHome3').addEventListener('click',()=>{state.view='home';render()});
+  const add=$('#addstay'); if(add)add.addEventListener('click',e=>{e.preventDefault();go('hotels')});
+  $('#holdbtn').addEventListener('click',openHold);
+}
+
+/* ================================================================
+   9 · SCATTER ENGINE
+================================================================ */
+function drawScatter(cv,wraps,cfg){
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||520, H=cv.clientHeight||300;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  if(!wraps.length)return;
+  const M={l:56,r:16,t:18,b:42};
+  const xs=wraps.map(w=>w.x), ys=wraps.map(w=>w.y);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(...ys), ymax=Math.max(...ys);
+  const x0=xmin-(xmax-xmin||xmin)*.08, x1=xmax+(xmax-xmin||xmax)*.08;
+  const y0=ymin-(ymax-ymin||ymin)*.12, y1=ymax+(ymax-ymin||ymax)*.12;
+  const X=v=>M.l+(v-x0)/(x1-x0)*(W-M.l-M.r), Y=v=>H-M.b-(v-y0)/(y1-y0)*(H-M.t-M.b);
+  const srt=[...wraps].sort((a,b)=>a.x-b.x); let best=Infinity;
+  srt.forEach(w=>{if(w.y<best){w.solid=true;best=w.y}else w.solid=false});
+  x.strokeStyle='rgba(231,239,232,.28)'; x.lineWidth=1;
+  x.beginPath(); x.moveTo(M.l,H-M.b); x.lineTo(W-M.r,H-M.b); x.moveTo(M.l,M.t); x.lineTo(M.l,H-M.b); x.stroke();
+  x.font='500 9.5px "IBM Plex Mono"'; x.fillStyle=C_T2;
+  ticks(x0,x1,4).forEach(v=>{const p=X(v);x.beginPath();x.moveTo(p,H-M.b);x.lineTo(p,H-M.b+4);x.stroke();x.textAlign='center';x.fillText(cfg.fx(v),p,H-M.b+16)});
+  ticks(y0,y1,4).forEach(v=>{const p=Y(v);x.beginPath();x.moveTo(M.l-4,p);x.lineTo(M.l,p);x.stroke();x.textAlign='right';x.fillText(cfg.fy(v),M.l-9,p+3)});
+  x.textAlign='center'; x.fillText(cfg.xt,(M.l+W-M.r)/2,H-8);
+  x.save(); x.translate(13,(M.t+H-M.b)/2); x.rotate(-Math.PI/2); x.fillText(cfg.yt,0,0); x.restore();
+  const fr=wraps.filter(w=>w.solid).sort((a,b)=>a.x-b.x);
+  if(fr.length>1){x.strokeStyle=C_ACC;x.lineWidth=1.2;x.setLineDash([4,3]);
+    x.beginPath();fr.forEach((w,i)=>i?x.lineTo(X(w.x),Y(w.y)):x.moveTo(X(w.x),Y(w.y)));x.stroke();x.setLineDash([])}
+  wraps.forEach(w=>{const px=X(w.x),py=Y(w.y);w.px=px;w.py=py;
+    x.beginPath();x.arc(px,py,w.r,0,7);
+    x.fillStyle=w.solid?C_ACC:C_PANEL; x.fill();
+    x.strokeStyle=w.solid?C_ACC:'rgba(154,175,160,.85)'; x.lineWidth=w.solid?1.4:1; x.stroke();});
+  if(cfg.selId){const w=wraps.find(w=>w.f?w.f.id===cfg.selId:w.h.id===cfg.selId);
+    if(w){x.beginPath();x.arc(w.px,w.py,w.r+4.5,0,7);x.strokeStyle=C_ACC;x.lineWidth=1.8;x.stroke()}}
+  cv._cfg=cfg;
+}
+function bindScatterEvents(cv,tip,getWraps){
+  if(!cv)return;
+  let hover=null;
+  cv.addEventListener('mousemove',e=>{
+    const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const wraps=getWraps()||[]; let best=null,bd=400;
+    wraps.forEach(w=>{const d=(w.px-mx)**2+(w.py-my)**2;if(d<bd){bd=d;best=w}});
+    hover=(best&&bd<289)?best:null;
+    if(hover){tip.style.display='block';tip.innerHTML=cv._cfg.tip(hover);
+      const tw=tip.offsetWidth, wrap=cv.parentElement.clientWidth;
+      tip.style.left=Math.min(Math.max(8,hover.px+16),wrap-tw-8)+'px';
+      tip.style.top=Math.max(4,hover.py-70)+'px';
+    } else tip.style.display='none';
+  });
+  cv.addEventListener('mouseleave',()=>{tip.style.display='none';hover=null});
+  cv.addEventListener('click',()=>{if(hover&&cv._cfg.onClick)cv._cfg.onClick(hover.f?hover.f.id:hover.h.id)});
+}
+
+/* ================================================================
+   10 · MODALS / TRIP BAR / NAV
+================================================================ */
+function openModal(html){$('#mbody').innerHTML=html;$('#mback').classList.add('on');icons()}
+function closeModal(){$('#mback').classList.remove('on')}
+ $('#mclose').addEventListener('click',closeModal);
+ $('#mback').addEventListener('click',e=>{if(e.target.id==='mback')closeModal()});
+function openSignin(){
+  openModal(`<div class="k">EcoVoyage account</div><h3>Welcome back</h3>
+  <div class="mf"><label class="k">email</label><input type="email" placeholder="you@example.com"></div>
+  <div class="mf"><label class="k">password</label><input type="password" placeholder="••••••••"></div>
+  <button class="btn full" id="signinGo">Sign in <i data-lucide="arrow-right"></i></button>
+  <p class="fine">Prototype build — accounts are simulated, nothing is stored or sent anywhere.</p>`);
+  $('#signinGo').addEventListener('click',()=>{closeModal();toast('Signed in as demo traveller · preferences loaded','user')});
+}
+function openHold(){
+  const t=tripTotals(), f=state.selF, h=state.selH, n=Math.max(1,nights()), r=roomsN();
+  openModal(`<div class="k">Itinerary hold</div><h3>Review & hold</h3>
+  <dl class="ml">
+    <div><dt>Outbound / Return</dt><dd>${airlineName(f)} · ${hhmm(f.dep)} → ${hhmm(f.arr)}${f.stops?' · via '+CITIES[f.via].city:''}</dd></div>
+    <div><dt>Stay</dt><dd>${h?`${h.name} · ${n}n · ${r} room${r>1?'s':''}`:'none selected'}</dd></div>
+    <div><dt>Party</dt><dd>${state.pax} traveller${state.pax>1?'s':''} · ${CABINS[state.cabin].name}</dd></div>
+    <div><dt>Total fare</dt><dd class="n">${fmtE(t.price)}</dd></div>
+    <div><dt>Total carbon account</dt><dd class="n" style="color:var(--acc)">${kg(t.co2)}</dd></div>
+  </dl>
+  <p class="fine">No payment is taken. Holds expire after 24 hours. Carbon figures follow the standards disclosed in the trip summary — standardized estimates for comparison, not guarantees.</p>
+  <div class="mbtns"><button class="btn ghost" id="mcancel">Keep editing</button><button class="btn" id="mhold">Hold itinerary</button></div>`);
+  $('#mcancel').addEventListener('click',closeModal);
+  $('#mhold').addEventListener('click',()=>{
+    const b=$('#mhold'); b.disabled=true; b.textContent='Reserving…';
+    setTimeout(()=>{
+      const ref='ECV-'+Math.random().toString(36).slice(2,7).toUpperCase();
+      $('#mbody').innerHTML=`<div class="holdok">
+        <i data-lucide="badge-check"></i><h3>Itinerary held</h3>
+        <div class="ref">${ref}</div>
+        <p class="fine">Reference valid 24 h. The carbon account of this trip (${kg(t.co2)}) is attached to the hold and will appear on your confirmation.</p>
+        <div class="mbtns" style="justify-content:center"><button class="btn" id="mok">Back to summary</button></div></div>`;
+      icons();
+      $('#mok').addEventListener('click',closeModal);
+      toast(`Itinerary held · ref ${ref} · valid 24 h`,'scroll-text');
+    },850);
+  });
+}
+function go(view){
+  if(view==='flights'&&!state.fSearch){toast('Run a flight search first — home panel.','plane');return}
+  if(view==='hotels'&&!state.hSearch){toast('Search a destination first — home panel.','bed-double');return}
+  if(view==='summary'&&!state.selF){toast('Select an outbound flight before the summary.','plane');return}
+  state.view=view; render(); window.scrollTo({top:0});
+}
+function updateBar(){
+  const on=state.view!=='home';
+  document.body.classList.toggle('has-bar',on);
+  if(!on)return;
+  const t=tripTotals(), bits=[];
+  if(state.fSearch)bits.push(`<span>${state.origin} → ${state.dest} · ${Math.max(1,nights())}n · ${state.pax} pax</span>`);
+  else bits.push(`<span>${CITIES[state.dest].city} · ${Math.max(1,nights())}n</span>`);
+  if(state.selF)bits.push(`<span><i data-lucide="plane"></i>${airlineName(state.selF)} held</span>`);
+  if(state.selH)bits.push(`<span><i data-lucide="bed-double"></i>${state.selH.name}</span>`);
+  if(t.price||t.co2)bits.push(`<b>${fmtE(t.price)} · ${kg(t.co2)}</b>`);
+  $('#tbsum').innerHTML=bits.join('');
+  const nb=$('#tbnext'); let lab='Continue',dis=false;
+  if(state.view==='flights'){lab=state.selF?'Choose stay':'Select a flight';dis=!state.selF}
+  else if(state.view==='hotels'){
+    if(state.selF&&state.selH)lab='Trip summary';
+    else if(state.selF)lab='Open summary';
+    else{lab='Add a flight';}
+  }
+  else if(state.view==='summary'){lab='Hold itinerary'}
+  nb.textContent=lab; nb.disabled=dis;
+  $('#tbprev').style.visibility='visible';
+  icons();
+}
+ $('#tbnext').addEventListener('click',()=>{
+  if(state.view==='flights'){if(state.selF)go('hotels')}
+  else if(state.view==='hotels'){
+    if(state.selF)go('summary');
+    else if(state.fSearch)go('flights');
+    else{state.view='home';render();window.scrollTo({top:0});toast('Start a flight search to complete the trip.','plane')}
+  }
+  else if(state.view==='summary')openHold();
+});
+ $('#tbprev').addEventListener('click',()=>{
+  if(state.view==='flights'){state.view='home';render()}
+  else if(state.view==='hotels'){state.fSearch?go('flights'):(state.view='home',render())}
+  else if(state.view==='summary'){state.hSearch?go('hotels'):go('flights')}
+  window.scrollTo({top:0});
+});
+ $('#brandHome').addEventListener('click',()=>{state.view='home';render();window.scrollTo({top:0})});
+document.querySelectorAll('.nlinks a[data-goto]').forEach(a=>a.addEventListener('click',()=>{
+  const id=a.dataset.goto;
+  if(state.view!=='home'){state.view='home';render()}
+  requestAnimationFrame(()=>{const el=document.getElementById(id);el&&el.scrollIntoView({behavior:'smooth'})});
+}));
+ $('#signinBtn').addEventListener('click',openSignin);
+ $('#startedBtn').addEventListener('click',()=>{
+  if(state.view!=='home'){state.view='home';render()}
+  requestAnimationFrame(()=>{
+    const p=$('#spanel'); if(!p)return;
+    p.scrollIntoView({behavior:'smooth',block:'center'});
+    p.classList.remove('pulse'); void p.offsetWidth; p.classList.add('pulse');
+    setTimeout(()=>$('#f-origin')&&$('#f-origin').focus(),500);
+  });
+});
+
+/* ================================================================
+   11 · RENDER & INIT
+================================================================ */
+function render(){
+  const v=$('#app');
+  document.body.classList.toggle('reference-active',state.view==='home');
+  if(state.view==='home'){v.innerHTML=vHomeReference();wireHome();const ref=$('#startedBtnRef');if(ref)ref.addEventListener('click',()=>$('#startedBtn').click())}
+  else if(state.view==='flights'){v.innerHTML=vFlights();wireFlights()}
+  else if(state.view==='hotels'){v.innerHTML=vHotels();wireHotels()}
+  else if(state.view==='summary'){v.innerHTML=vSummary();wireSummary()}
+  icons(); updateBar();
+}
+window.addEventListener('resize',()=>{
+  if($('#scf'))drawScatterF();
+  if($('#sch'))drawScatterH();
+});
+let liveN=12431;
+setInterval(()=>{liveN+=2+Math.floor(Math.random()*12);const el=document.getElementById('liveco2');if(el)el.textContent=liveN.toLocaleString('en-GB')},2600);
+render();
+</script>
+</body>
+</html>
